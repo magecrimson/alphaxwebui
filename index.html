@@ -651,47 +651,54 @@
 
 <!-- POOL MINERS PAGE START -->	
 <div class="page-miners" style="display:none;">
-	<div class="main-panel">
-		<div class="content">
-			<div class="inner">
-				<div class="my-header">
-				<h4 class="my-title"><span class="stamp stamp-sm bg-info mr-2"><i class="fas fa-users"></i></span>Miners</h4>
-					<ul class="breadcrumbs">
-						<li class="nav-item"><i class="flaticon-home"></i></li>
-						<li class="separator"><i class="flaticon-right-arrow"></i></li>
-						<li class="nav-item">Pool</li>
-						<li class="separator"><i class="flaticon-right-arrow"></i></li>
-						<li class="nav-item">Miners</li>
-					</ul>
-				</div>
-				<div class="card">
-					<div class="card-header">
-					<div class="card-title"><center><b>TOP 20 MINERS</b></center></div>
-					</div>
-					<div class="card-body">
-						<div class="table-responsive">
-							<table class="table table-head-bg-info table-hover text-nowrap">
-                      						<thead class=" text-primary">
-								<tr>
-								<th>Address</th>
-                            					<th>Hashrate</th>
-                            					<th>Share Rate</th>
-                        					</tr>
-					  			</thead>
-                      						<tbody id="minerList"></tbody>
-                    					</table>
-              					</div>
-					</div>
-				</div>
-			</div>
-		</div>
-		<footer class="footer">
-			<div class="container-fluid">
-				<div class="copyright pull-left">AlphaX Core Web UI 1.2.0</div>
-				<div class="copyright ml-auto pull-right">&copy; 2021 MADE WITH <i class="fa fa-heart heart text-danger"></i> BY <a href="https://github.com/AlphaX-Projects/Alphaxcore-WebUI.git">AlphaX</a></div>
-			</div>
-		</footer>
-	</div>
+    <div class="main-panel">
+        <div class="content">
+            <div class="inner">
+                <div class="my-header">
+                    <h4 class="my-title">
+                        <span class="stamp stamp-sm bg-info mr-2"><i class="fas fa-users"></i></span>Miners
+                    </h4>
+                    <ul class="breadcrumbs">
+                        <li class="nav-item"><i class="flaticon-home"></i></li>
+                        <li class="separator"><i class="flaticon-right-arrow"></i></li>
+                        <li class="nav-item">Pool</li>
+                        <li class="separator"><i class="flaticon-right-arrow"></i></li>
+                        <li class="nav-item">Miners</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <center><b>TOP 20 MINERS</b></center>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-head-bg-info table-hover text-nowrap">
+                                <thead class="text-primary">
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>Hashrate</th>
+                                        <th>Share Rate</th>
+                                        <th>Workers</th> <!-- New Workers Column -->
+                                    </tr>
+                                </thead>
+                                <tbody id="minerList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+            <div class="container-fluid">
+                <div class="copyright pull-left"></div>
+                <div class="copyright ml-auto pull-right">
+                    &copy; 2021 Crimson-Pool.com
+                </div>
+            </div>
+        </footer>
+    </div>
 </div>
 <!-- POOL MINERS PAGE END -->
 
