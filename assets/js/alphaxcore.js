@@ -686,6 +686,48 @@ function loadDashboardChart(walletAddress) {
 	});
 }
 
+// Load dashjboard Payouts for Miner
+
+function loadDashboardPayouts(walletAddress) {
+    if (!walletAddress) {
+        $("#payoutList").html('<tr><td colspan="3" class="text-center">No wallet address provided.</td></tr>');
+        return;
+    }
+
+    $.ajax(API + "pools/" + currentPool + "/miners/" + walletAddress + "/payments")
+        .done(function(data) {
+            var payoutList = "";
+
+            if (data.length > 0) {
+                $.each(data, function(index, payout) {
+                    var utcDate = new Date(payout.created);
+                    var localDate = convertUTCDateToLocalDate(utcDate);
+
+                    payoutList += "<tr>";
+                    payoutList += "<td>" + localDate.toLocaleString() + "</td>"; // Payout date
+                    payoutList += "<td>" + _formatter(payout.amount, 5, "") + "</td>"; // Payout amount
+                    payoutList += "<td><a href='" + payout.transactionInfoLink + "' target='_blank'>" +
+                                  payout.transactionConfirmationData.substring(0, 16) + " &hellip; " +
+                                  payout.transactionConfirmationData.substring(payout.transactionConfirmationData.length - 16) +
+                                  "</a></td>"; // Transaction link
+                    payoutList += "</tr>";
+                });
+            } else {
+                payoutList = '<tr><td colspan="3" class="text-center">No payouts available for this wallet.</td></tr>';
+            }
+
+            $("#payoutList").html(payoutList);
+        })
+        .fail(function() {
+            $("#payoutList").html('<tr><td colspan="3" class="text-center">Error loading payouts.</td></tr>');
+            $.notify(
+                { message: "Error: Unable to fetch payouts.<br>(loadDashboardPayouts)" },
+                { type: "danger", timer: 3000 }
+            );
+        });
+}
+
+
 
 // Load Miners Page
 function loadMinersPage() {
