@@ -689,29 +689,79 @@ function loadDashboardChart(walletAddress) {
 
 // Load Miners Page
 function loadMinersPage() {
-	return $.ajax(API + "pools/" + currentPool + "/miners?page=0&pagesize=20")
-	.done(function(data) {
-	var minerList = "";
-	if (data.length > 0) {
-	$.each(data, function(index, value) {
-		minerList += "<tr>";
-		minerList += "<td>" + value.miner + "</td>";
-		minerList += "<td>" + _formatter(value.hashrate, 5, "H/s") + "</td>";
-		minerList += "<td>" + _formatter(value.sharesPerSecond, 5, "S/s") + "</td>";
-		minerList += "</tr>";
-	});
-	} else {
-		 minerList += '<tr><td colspan="4">No Miner Connected</td></tr>';
-	}
-	$("#minerList").html(minerList);
-	})
-	.fail(function() {
-	$.notify(
-	{message: "Error: No response from API.<br>(loadMinersList)"},
-	{type: "danger",timer: 3000}
-	);
-	});
+    return $.ajax(API + "pools/" + currentPool + "/miners?page=0&pagesize=20")
+        .done(function(data) {
+            var minerList = [];
+            var requests = [];
+
+            if (data.length > 0) {
+                // Loop through miners
+                $.each(data, function(index, miner) {
+                    var request = $.ajax(API + "pools/" + currentPool + "/miners/" + miner.miner)
+                        .done(function(minerData) {
+                            if (minerData.performance && minerData.performance.workers) {
+                                let workers = minerData.performance.workers;
+                                let workerCount = Object.keys(workers).length;
+
+                                // Calculate current hashrate
+                                let currentHashrate = 0;
+                                let totalShareRate = 0;
+
+                                $.each(workers, function(workerName, workerData) {
+                                    currentHashrate += workerData.hashrate || 0;
+                                    totalShareRate += workerData.sharesPerSecond || 0;
+                                });
+
+                                if (workerCount > 0) {
+                                    // Add miner data to the list for sorting
+                                    minerList.push({
+                                        address: miner.miner,
+                                        currentHashrate: currentHashrate,
+                                        totalShareRate: totalShareRate,
+                                        workerCount: workerCount
+                                    });
+                                }
+                            }
+                        });
+                    requests.push(request);
+                });
+
+                // Wait for all requests to complete
+                $.when.apply($, requests).done(function() {
+                    // Sort miners by current hash rate in descending order
+                    minerList.sort(function(a, b) {
+                        return b.currentHashrate - a.currentHashrate;
+                    });
+
+                    // Build the table
+                    let tableContent = "";
+                    minerList.forEach(function(miner) {
+                        tableContent += "<tr>";
+                        tableContent += "<td>" + miner.address + "</td>"; // Miner address
+                        tableContent += "<td>" + _formatter(miner.currentHashrate, 3, "H/s") + "</td>"; // Current hash rate
+                        tableContent += "<td>" + _formatter(miner.totalShareRate, 3, "S/s") + "</td>"; // Share rate
+                        tableContent += "<td>" + miner.workerCount + " Worker(s)</td>"; // Worker count
+                        tableContent += "</tr>";
+                    });
+
+                    // Fallback if no miners with workers
+                    if (tableContent === "") {
+                        tableContent = '<tr><td colspan="4">No Miners with Connected Workers</td></tr>';
+                    }
+                    $("#minerList").html(tableContent);
+                });
+            } else {
+                $("#minerList").html('<tr><td colspan="4">No Miners Available</td></tr>');
+            }
+        })
+        .fail(function() {
+            $.notify(
+                { message: "Error: No response from API.<br>(loadMinersPage)" },
+                { type: "danger", timer: 3000 }
+            );
+        });
 }
+
 
 
 // Load Blocks page content
