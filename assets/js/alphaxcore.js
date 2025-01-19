@@ -765,91 +765,97 @@ function loadMinersPage() {
 
 
 // Load Blocks page content
+
 function loadBlocksPage() {
-	return $.ajax(API + "pools/" + currentPool + "/blocks?page=0&pageSize=50")
-	.done(function(data) {
-	var blockList = "";
-	if (data.length > 0) {
-	$.each(data, function(index, value) {
-		var createDate = convertLocalDateToUTCDate(new Date(value.created),false);
-		var effort = Math.round(value.effort * 100);
-		var effortClass = "";
-		if (effort < 100) {
-		effortClass = "effort1";
-		} else if (effort < 200) {
-		effortClass = "effort2";
-		} else if (effort < 500) {
-		effortClass = "effort3";
-		} else {
-		effortClass = "effort4";
-		}
-	var calcs = Math.round(value.confirmationProgress * 100);
-		blockList += "<tr>";
-		blockList += "<td>" + createDate + "</td>";
-		blockList += "<td>" + value.miner.substring(0, 8) + " &hellip; " + value.miner.substring(value.miner.length - 8) + "</td>";
-		blockList += "<td><a href='" + value.infoLink + "' target='_blank'>" + value.blockHeight + "</a></td>";
-		blockList += "<td>" + _formatter(value.networkDifficulty, 5, "H/s") + "</td>";
-		if (typeof value.effort !== "undefined") {
-		blockList += "<td><span class='" + effortClass + "'>" + effort + "%</span></td>";
-		} else {
-		blockList += "<td>n/a</td>";
-		}
-	var status = value.status;
-                if (value.status == "confirmed") {
-                blockList += "<td><span class='badge badge-success'>Confirmed</span></td>";
-                } else if (value.status == "pending") {
-                blockList += "<td><span class='badge badge-warning'>Pending</span></td>";
-                } else if (value.status == "orphaned") {
-                blockList += "<td><span class='badge badge-danger'>Orphaned</span></td>";
-                } else {
-                blockList += "<td>" + status + "</td>";
-                }
-		blockList += "<td>" + _formatter(value.reward, 5, "") + "</td>";
-		blockList += "<td><div class='progress-bar bg-info progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='" + calcs + "' aria-valuemin='0' aria-valuemax='100' style='width: " + calcs + "%'><span>" + calcs + "% Completed</span></div></td>";
-		blockList += "</tr>";
-	});
-	} else {
-		blockList += '<tr><td colspan="6">No Blocks Found Yet</td></tr>';
-	}
-	$("#blockList").html(blockList);
-	})
-	.fail(function() {
-	$.notify(
-	{message: "Error: No response from API.<br>(loadBlocksList)"},
-	{type: "danger",timer: 3000}
-	);
-	});
+    return $.ajax(API + "pools/" + currentPool + "/blocks?page=0&pageSize=50")
+        .done(function(data) {
+            var blockList = "";
+            if (data.length > 0) {
+                $.each(data, function(index, value) {
+                    var utcDate = new Date(value.created);
+                    var localDate = convertUTCDateToLocalDate(utcDate);
+                    var effort = Math.round(value.effort * 100);
+                    var effortClass = "";
+
+                    if (effort < 100) {
+                        effortClass = "effort1";
+                    } else if (effort < 200) {
+                        effortClass = "effort2";
+                    } else if (effort < 500) {
+                        effortClass = "effort3";
+                    } else {
+                        effortClass = "effort4";
+                    }
+
+                    var calcs = Math.round(value.confirmationProgress * 100);
+                    blockList += "<tr>";
+                    blockList += "<td>" + localDate.toLocaleString() + "</td>";
+                    blockList += "<td>" + value.miner.substring(0, 8) + " &hellip; " + value.miner.substring(value.miner.length - 8) + "</td>";
+                    blockList += "<td><a href='" + value.infoLink + "' target='_blank'>" + value.blockHeight + "</a></td>";
+                    blockList += "<td>" + _formatter(value.networkDifficulty, 5, "H/s") + "</td>";
+                    if (typeof value.effort !== "undefined") {
+                        blockList += "<td><span class='" + effortClass + "'>" + effort + "%</span></td>";
+                    } else {
+                        blockList += "<td>n/a</td>";
+                    }
+                    var status = value.status;
+                    if (value.status == "confirmed") {
+                        blockList += "<td><span class='badge badge-success'>Confirmed</span></td>";
+                    } else if (value.status == "pending") {
+                        blockList += "<td><span class='badge badge-warning'>Pending</span></td>";
+                    } else if (value.status == "orphaned") {
+                        blockList += "<td><span class='badge badge-danger'>Orphaned</span></td>";
+                    } else {
+                        blockList += "<td>" + status + "</td>";
+                    }
+                    blockList += "<td>" + _formatter(value.reward, 5, "") + "</td>";
+                    blockList += "<td><div class='progress-bar bg-info progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='" + calcs + "' aria-valuemin='0' aria-valuemax='100' style='width: " + calcs + "%'><span>" + calcs + "% Completed</span></div></td>";
+                    blockList += "</tr>";
+                });
+            } else {
+                blockList += '<tr><td colspan="6">No Blocks Found Yet</td></tr>';
+            }
+            $("#blockList").html(blockList);
+        })
+        .fail(function() {
+            $.notify(
+                {message: "Error: No response from API.<br>(loadBlocksList)"},
+                {type: "danger", timer: 3000}
+            );
+        });
 }
 
 
 // Load Payments page content
-function loadPaymentsPage() {
-	return $.ajax(API + "pools/" + currentPool + "/payments?page=0&pageSize=500")
-	.done(function(data) {
-	var paymentList = "";
-	if (data.length > 0) {
-	$.each(data, function(index, value) {
-	var createDate = convertLocalDateToUTCDate(new Date(value.created),false);
-		paymentList += '<tr>';
-		paymentList += "<td>" + createDate + "</td>";
-		paymentList += '<td><a href="' + value.addressInfoLink + '" target="_blank">' + value.address.substring(0, 12) + ' &hellip; ' + value.address.substring(value.address.length - 12) + '</td>';
-		paymentList += '<td>' + _formatter(value.amount, 5, '') + '</td>';
-		paymentList += '<td colspan="2"><a href="' + value.transactionInfoLink + '" target="_blank">' + value.transactionConfirmationData.substring(0, 16) + ' &hellip; ' + value.transactionConfirmationData.substring(value.transactionConfirmationData.length - 16) + ' </a></td>';
-		paymentList += '</tr>';
-	});
-	} else {
-		paymentList += '<tr><td colspan="4">No Payments Made Yet</td></tr>';
-	}
-	$("#paymentList").html(paymentList);
-	})
-	.fail(function() {
-	$.notify(
-	{message: "Error: No response from API.<br>(loadPaymentsList)"},
-	{type: "danger",timer: 3000}
-	);
-	});
-}
 
+function loadPaymentsPage() {
+    return $.ajax(API + "pools/" + currentPool + "/payments?page=0&pageSize=500")
+        .done(function(data) {
+            var paymentList = "";
+            if (data.length > 0) {
+                $.each(data, function(index, value) {
+                    var utcDate = new Date(value.created);
+                    var localDate = convertUTCDateToLocalDate(utcDate);
+
+                    paymentList += '<tr>';
+                    paymentList += "<td>" + localDate.toLocaleString() + "</td>";
+                    paymentList += '<td><a href="' + value.addressInfoLink + '" target="_blank">' + value.address.substring(0, 12) + ' &hellip; ' + value.address.substring(value.address.length - 12) + '</a></td>';
+                    paymentList += '<td>' + _formatter(value.amount, 5, '') + '</td>';
+                    paymentList += '<td colspan="2"><a href="' + value.transactionInfoLink + '" target="_blank">' + value.transactionConfirmationData.substring(0, 16) + ' &hellip; ' + value.transactionConfirmationData.substring(value.transactionConfirmationData.length - 16) + ' </a></td>';
+                    paymentList += '</tr>';
+                });
+            } else {
+                paymentList += '<tr><td colspan="4">No Payments Made Yet</td></tr>';
+            }
+            $("#paymentList").html(paymentList);
+        })
+        .fail(function() {
+            $.notify(
+                {message: "Error: No response from API.<br>(loadPaymentsList)"},
+                {type: "danger", timer: 3000}
+            );
+        });
+}
 
 // Load Connect page content
 function loadConnectPage() {
