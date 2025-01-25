@@ -320,48 +320,53 @@ function loadWidgetBigPage() {
 // Load Widget medium page content
 
 function loadWidgetMediumPage() {
-    console.log('Loading medium widget page content...');
+    console.log("Loading medium widget page content...");
 
-    $.ajax(API + "pools")
+    return $.ajax(API + "pools")
         .done(function (data) {
             let poolCoinWidgetMediumTemplate = "";
             let coinIds = [];
 
-            // Build CoinGecko ID list
-            $.each(data.pools, function (index, value) {
-                const priceName = value.coin.pricename; // Get pricename
-                if (priceName) {
-                    coinIds.push(priceName.toLowerCase()); // Add to list
+            // Collect CoinPaprika IDs dynamically
+            $.each(data.pools, function (index, pool) {
+                if (pool.coin.pricename) {
+                    coinIds.push(pool.coin.pricename.toLowerCase());
                 } else {
-                    console.warn(`Missing 'pricename' for pool: ${value.coin.type}`);
+                    console.warn(`Pricename missing for pool: ${pool.coin.name}`);
                 }
             });
 
-            // Log CoinGecko IDs
-            console.log("CoinGecko IDs:", coinIds);
-
+            // Ensure we have valid Coin IDs
             if (coinIds.length === 0) {
-                $(".pool-coin-widget-medium").html("<div class='alert alert-danger'>No valid coins found for pricing data.</div>");
+                $(".pool-coin-widget-medium").html(
+                    "<div class='alert alert-danger'>No valid coins found for pricing data.</div>"
+                );
                 return;
             }
 
-            // Fetch prices from CoinGecko
-            const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(",")}&vs_currencies=usd`;
-            $.ajax(coinGeckoUrl, {
-                success: function (priceData) {
-                    console.log("CoinGecko Price Data:", priceData);
+            // Process each pool individually to fetch prices from CoinPaprika
+            $.each(data.pools, function (index, pool) {
+                const coinId = pool.coin.pricename ? pool.coin.pricename.toLowerCase() : null;
 
-                    // Process pools and build widgets
-                    $.each(data.pools, function (index, pool) {
-                        const coinId = pool.coin.pricename ? pool.coin.pricename.toLowerCase() : null;
-                        const coinName = pool.coin.name || pool.coin.type;
-                        let coinPriceUSD = "Unavailable";
+                if (!coinId) {
+                    console.warn(`No valid pricename for coin: ${pool.coin.name}`);
+                    return;
+                }
 
-                        if (coinId && priceData[coinId] && priceData[coinId].usd) {
-                            coinPriceUSD = `$${priceData[coinId].usd.toFixed(6)}`;
-                        }
+                const coinPaprikaUrl = `https://api.coinpaprika.com/v1/tickers/${coinId}`;
+                console.log("CoinPaprika API URL:", coinPaprikaUrl);
 
-                        // Create pool widget
+                // Fetch price for the current coin
+                $.ajax(coinPaprikaUrl, {
+                    success: function (priceData) {
+                        console.log("CoinPaprika Response:", priceData);
+
+                        const coinPriceUSD =
+                            priceData.quotes && priceData.quotes.USD && priceData.quotes.USD.price
+                                ? `$${priceData.quotes.USD.price.toFixed(6)}`
+                                : "Unavailable";
+
+                        // Build the medium widget for this pool
                         poolCoinWidgetMediumTemplate += `
                             <div class="col-md-4">
                                 <div class="med-box med-box-widget med-widget-user">
@@ -373,7 +378,7 @@ function loadWidgetMediumPage() {
                                                 </span>
                                             </a>
                                         </button>
-                                        <h3 class='med-widget-user-username'>${coinName}</h3>
+                                        <h3 class='med-widget-user-username'>${pool.coin.name}</h3>
                                     </div>
                                     <div class="med-widget-user-image">
                                         <img class='avatar-img rounded-circle' src='coinlogo/${pool.coin.type.toLowerCase()}.png'>
@@ -399,119 +404,23 @@ function loadWidgetMediumPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class='text-center mt-3'><strong>Current Value:</strong> ${coinPriceUSD}</div>
+                                        <div class="text-center mt-3"><strong>Current Value:</strong> ${coinPriceUSD}</div>
                                     </div>
                                 </div>
                             </div>`;
-                    });
-
-                    $(".pool-coin-widget-medium").html(poolCoinWidgetMediumTemplate);
-                },
-                error: function () {
-                    console.error("Error fetching prices from CoinGecko.");
-                    $(".pool-coin-widget-medium").html("<div class='alert alert-danger'>Failed to load coin prices.</div>");
-                }
+                        $(".pool-coin-widget-medium").html(poolCoinWidgetMediumTemplate);
+                    },
+                    error: function () {
+                        console.error(`Failed to fetch price for coin: ${coinId}`);
+                    },
+                });
             });
         })
         .fail(function () {
-            $(".pool-coin-widget-medium").html("<div class='alert alert-warning'>The pool is currently down for maintenance.</div>");
+            $(".pool-coin-widget-medium").html(
+                "<div class='alert alert-warning'>The pool is currently down for maintenance.</div>"
+            );
         });
-}
-
-
-// Load Widget small page content
-function loadWidgetSmallPage() {
-	console.log('Loading small widget page content');
-	return $.ajax(API + "pools")
-	.done(function(data) {
-	var poolCoinWidgetSmallTemplate = "";
-	$.each(data.pools, function(index, value) {
-	var coinLogo = "<img class='coinimg' src='coinlogo/" + value.coin.type.toLowerCase() + ".png'>";
-		var coinName = value.coin.name;
-		if (typeof coinName === "undefined" || coinName === null) {coinName = value.coin.type;}
-		poolCoinWidgetSmallTemplate += "<div class='col-md-4'>";
-		poolCoinWidgetSmallTemplate += "<div class='card card-round'>";
-		poolCoinWidgetSmallTemplate += "<div class='card-body'>";
-		poolCoinWidgetSmallTemplate += "<div class='card-fee fw-light float-right text-info'><h6>Pool Fee: " + value.poolFeePercent + " %</h6></div>";
-		poolCoinWidgetSmallTemplate += "<div class='card-title fw-bold'>" + coinName + "</div>";
-		poolCoinWidgetSmallTemplate += "<div class='card-list'>";
-		poolCoinWidgetSmallTemplate += "<div class='item-list'>";
-		poolCoinWidgetSmallTemplate += "<div class='avatar'>";
-		poolCoinWidgetSmallTemplate += "<img class='avatar-img rounded-circle' src='coinlogo/" + value.coin.type.toLowerCase() + ".png'>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "<div class='info-user ml-3'>";
-		poolCoinWidgetSmallTemplate += "<div class='username text-info'>Algo :&emsp;&emsp;" + value.coin.algorithm + "</div>";
-		poolCoinWidgetSmallTemplate += "<div class='username text-warning'>Payout :&emsp;" + value.paymentProcessing.payoutScheme + "</div>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "<button class='btn btn-magblue btn-round btn-sm'><a href='#" + value.id.toLowerCase() + "'<span class='btn-label'>Go Mine&nbsp;&nbsp;<img src='coinlogo/" + value.coin.type.toLowerCase() + ".png' height='20' width='20'></span></a></button>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "</div>";
-	});
-	$(".pool-coin-widget-small").html(poolCoinWidgetSmallTemplate);
-	})
-	.fail(function() {
-		var poolCoinWidgetSmallTemplate = "";
-		poolCoinWidgetSmallTemplate += "<div class='col-md-12'>";
-		poolCoinWidgetSmallTemplate += "<tr><td colspan='8'>";
-		poolCoinWidgetSmallTemplate += "<div class='alert alert-warning'>";
-		poolCoinWidgetSmallTemplate += "<h4><i class='fas fa-exclamation-triangle'></i> Warning!</h4>";
-		poolCoinWidgetSmallTemplate += "<hr>";
-		poolCoinWidgetSmallTemplate += "<p>The pool is currently down for maintenance.</p>";
-		poolCoinWidgetSmallTemplate += "<p>Please try again later.</p>";
-		poolCoinWidgetSmallTemplate += "</div>";
-		poolCoinWidgetSmallTemplate += "</td></tr>";	  
-	$(".pool-coin-widget-small").html(poolCoinWidgetSmallTemplate);	  
-	});
-}
-
-// Load Overview page content
-function loadOverviewPage() {
-	console.log('Loading overview page content');
-	return $.ajax(API + "pools")
-	.done(function(data) {
-	var poolOverviewTemplate = "";
-	$.each(data.pools, function(index, value) {
-	var coinLogo = "<img class='coinimg' src='coinlogo/" + value.coin.type.toLowerCase() + ".png'>";
-	var coinName = value.coin.name;
-		if (typeof coinName === "undefined" || coinName === null) {coinName = value.coin.type;}
-		poolOverviewTemplate += '<tr>';
-		poolOverviewTemplate += '<td>' + coinLogo + '</td>';
-		poolOverviewTemplate += '<td>' + coinName + '</td>';
-		poolOverviewTemplate += '<td>' + value.coin.type + '</td>';
-		poolOverviewTemplate += '<td>' + value.poolStats.connectedMiners + '</td>';
-		poolOverviewTemplate += '<td>' + _formatter(value.poolStats.poolHashrate, 3, "H/s") + '</td>';
-		poolOverviewTemplate += '<td>' + value.networkStats.blockHeight + '</td>';
-		poolOverviewTemplate += '<td>' + _formatter(value.totalPaid, 4, "") + '</td>';
-		poolOverviewTemplate += "<td><button class='btn btn-outline-success btn-round btn-sm float-right'><a href='../#" + value.id.toLowerCase() + "'<span class='btn-label'>Start Mine&nbsp;&nbsp;<img src='coinlogo/" + value.coin.type.toLowerCase() + ".png' height='20' width='20'></span></a></button></td>";
-		poolOverviewTemplate += '</tr>';
-	});
-	$("#pool-overview").html(poolOverviewTemplate);
-	})
-	.fail(function() {
-	$.notify(
-	{message: "Error: No response from API.<br>(loadOverviewPage)"},
-	{type: "danger",timer: 3000}
-	);
-	});
-}
-
-// Load Stats page content
-function loadStatsPage() {
-	setInterval(
-	(function load() {
-	loadStatsData();
-	return load;
-	})(),
-	60000);
-	setInterval(
-	(function load() {
-	loadStatsChart();
-	return load;
-	})(),
-	60000);
 }
 
 
@@ -633,28 +542,82 @@ function loadWallet() {
 
 // Load Dashboard page data
 function loadDashboardData(walletAddress) {
-	return $.ajax(API + "pools/" + currentPool + "/miners/" + walletAddress)
-	.done(function(data) {
-	$("#pendingShares").text(_formatter(data.pendingShares, 0, ""));
-	var workerHashRate = 0;
-	if (data.performance) {
-	$.each(data.performance.workers, function(index, value) {
-	workerHashRate += value.hashrate;
-	});
-	}
-	$("#minerHashRate").text(_formatter(workerHashRate, 3, "H/s"));
-	$("#pendingBalance").text(_formatter(data.pendingBalance, 5, ""));
-	$("#paidBalance").text(_formatter(data.todayPaid, 5, ""));
-	$("#lifetimeBalance").text(_formatter(data.pendingBalance + data.totalPaid, 5, "")
-	);
-	})
-	.fail(function() {
-	$.notify(
-	{message: "Error: No response from API.<br>(loadDashboardData)"},
-	{type: "danger",timer: 3000}
-	);
-	});
+    // Fetch pool data to dynamically retrieve the coin ID for CoinPaprika
+    $.ajax(API + "pools")
+        .done(function (poolsData) {
+            // Find the pool matching the currentPool
+            const currentPoolData = poolsData.pools.find(pool => pool.id === currentPool);
+
+            if (!currentPoolData || !currentPoolData.coin.pricename) {
+                console.warn("Pricename is missing or invalid for this pool.");
+                $("#totalEarned").text("Unavailable");
+                return;
+            }
+
+            const coinId = currentPoolData.coin.pricename.toLowerCase(); // Assuming pricename maps to CoinPaprika's `id`
+            console.log("Fetched CoinPaprika ID:", coinId);
+
+            // Fetch miner data for the dashboard
+            $.ajax(API + "pools/" + currentPool + "/miners/" + walletAddress)
+                .done(function (data) {
+                    $("#pendingShares").text(_formatter(data.pendingShares, 0, ""));
+
+                    var workerHashRate = 0;
+                    if (data.performance) {
+                        $.each(data.performance.workers, function (index, value) {
+                            workerHashRate += value.hashrate;
+                        });
+                    }
+                    $("#minerHashRate").text(_formatter(workerHashRate, 3, "H/s"));
+                    $("#pendingBalance").text(_formatter(data.pendingBalance, 5, ""));
+                    $("#paidBalance").text(_formatter(data.todayPaid, 5, ""));
+
+                    // Calculate Lifetime Balance
+                    const lifetimeBalance = data.pendingBalance + data.totalPaid;
+                    $("#lifetimeBalance").text(_formatter(lifetimeBalance, 5, ""));
+
+                    // Fetch price from CoinPaprika
+                    const coinPaprikaUrl = `https://api.coinpaprika.com/v1/tickers/${coinId}`;
+                    console.log("CoinPaprika API URL:", coinPaprikaUrl);
+
+                    $.ajax(coinPaprikaUrl, {
+                        success: function (priceData) {
+                            console.log("CoinPaprika Response:", priceData);
+
+                            const coinPrice =
+                                priceData.quotes && priceData.quotes.USD && priceData.quotes.USD.price
+                                    ? priceData.quotes.USD.price
+                                    : 0;
+                            console.log("Coin Price:", coinPrice);
+
+                            const totalEarned = coinPrice * lifetimeBalance;
+                            console.log("Lifetime Balance:", lifetimeBalance);
+                            console.log("Total Earned (USD):", totalEarned);
+
+                            // Display Total Earned in USD inside the Lifetime Balance card
+                            $("#totalEarned").text(`$${totalEarned.toFixed(2)}`);
+                        },
+                        error: function () {
+                            console.error("Failed to fetch CoinPaprika price.");
+                            $("#totalEarned").text("Unavailable");
+                        },
+                    });
+                })
+                .fail(function () {
+                    $.notify(
+                        {
+                            message: "Error: No response from API.<br>(loadDashboardData)",
+                        },
+                        { type: "danger", timer: 3000 }
+                    );
+                });
+        })
+        .fail(function () {
+            console.error("Failed to fetch pool data.");
+            $("#totalEarned").text("Unavailable");
+        });
 }
+
 
 
 // Load Dashboard page worker
