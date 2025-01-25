@@ -318,65 +318,106 @@ function loadWidgetBigPage() {
 }
 
 // Load Widget medium page content
+
 function loadWidgetMediumPage() {
-	console.log('Loading medium widget page content');
-	return $.ajax(API + "pools")
-	.done(function(data) {  
-	var poolCoinWidgetMediumTemplate = "";
-      	$.each(data.pools, function(index, value) {
-        var coinLogo = "<img class='coinimg' src='coinlogo/" + value.coin.type.toLowerCase() + ".png'>";
-		var coinName = value.coin.name;
-		if (typeof coinName === "undefined" || coinName === null) {coinName = value.coin.type;}        		
-		poolCoinWidgetMediumTemplate += "<div class='col-md-4'>";
-		poolCoinWidgetMediumTemplate += "<div class='med-box med-box-widget med-widget-user'>";
-		poolCoinWidgetMediumTemplate += "<div class='med-widget-user-header bg-night'>";
-		poolCoinWidgetMediumTemplate += "<button class='btn btn-outline-success btn-round btn-sm float-right'><a href='#" + value.id.toLowerCase() + "'<span class='btn-label'>Start Mine&nbsp;&nbsp;<img src='coinlogo/" + value.coin.type.toLowerCase() + ".png' height='20' width='20'></span></a></button>";
-		poolCoinWidgetMediumTemplate += "<h3 class='med-widget-user-username'>" + coinName + "</h3>";
-                poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "<div class='med-widget-user-image'>";
-                poolCoinWidgetMediumTemplate += "<img class='avatar-img rounded-circle' src='coinlogo/" + value.coin.type.toLowerCase() + ".png'>";
-                poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "<div class='med-box-footer'>";
-		poolCoinWidgetMediumTemplate += "<div class='row'>";
-		poolCoinWidgetMediumTemplate += "<div class='col-sm-4 med-border-right'>";
-		poolCoinWidgetMediumTemplate += "<div class='med-description-block'>";
-		poolCoinWidgetMediumTemplate += "<h5 class='med-description-header'>" + value.coin.algorithm + "</h5>";
-		poolCoinWidgetMediumTemplate += "<span class='med-description-text'>Algorithm</span>";
-                poolCoinWidgetMediumTemplate += "</div>";
-                poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "<div class='col-sm-4 med-border-right'>";
-		poolCoinWidgetMediumTemplate += "<div class='med-description-block'>";
-		poolCoinWidgetMediumTemplate += "<h5 class='med-description-header'>" + value.paymentProcessing.payoutScheme + "</h5>";
-		poolCoinWidgetMediumTemplate += "<span class='med-description-text'>Payout</span>";
-                poolCoinWidgetMediumTemplate += "</div>";
-                poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "<div class='col-sm-4'>";
-		poolCoinWidgetMediumTemplate += "<div class='med-description-block'>";
-		poolCoinWidgetMediumTemplate += "<h5 class='med-description-header'>" + value.poolFeePercent + " %</h5>";
-		poolCoinWidgetMediumTemplate += "<span class='med-description-text'>Pool Fee</span>";
-                poolCoinWidgetMediumTemplate += "</div>";
-                poolCoinWidgetMediumTemplate += "</div>";
-                poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "</div>";
-	});
-	$(".pool-coin-widget-medium").html(poolCoinWidgetMediumTemplate);
-	})
-	.fail(function() {
-		var poolCoinWidgetMediumTemplate = "";
-		poolCoinWidgetMediumTemplate += "<div class='col-md-12'>";
-		poolCoinWidgetMediumTemplate += "<tr><td colspan='8'>";
-		poolCoinWidgetMediumTemplate += "<div class='alert alert-warning'>";
-		poolCoinWidgetMediumTemplate += "<h4><i class='fas fa-exclamation-triangle'></i> Warning!</h4>";
-		poolCoinWidgetMediumTemplate += "<hr>";
-		poolCoinWidgetMediumTemplate += "<p>The pool is currently down for maintenance.</p>";
-		poolCoinWidgetMediumTemplate += "<p>Please try again later.</p>";
-		poolCoinWidgetMediumTemplate += "</div>";
-		poolCoinWidgetMediumTemplate += "</td></tr>";  
-	$(".pool-coin-widget-medium").html(poolCoinWidgetMediumTemplate);  
-	});
+    console.log('Loading medium widget page content...');
+
+    $.ajax(API + "pools")
+        .done(function (data) {
+            let poolCoinWidgetMediumTemplate = "";
+            let coinIds = [];
+
+            // Build CoinGecko ID list
+            $.each(data.pools, function (index, value) {
+                const priceName = value.coin.pricename; // Get pricename
+                if (priceName) {
+                    coinIds.push(priceName.toLowerCase()); // Add to list
+                } else {
+                    console.warn(`Missing 'pricename' for pool: ${value.coin.type}`);
+                }
+            });
+
+            // Log CoinGecko IDs
+            console.log("CoinGecko IDs:", coinIds);
+
+            if (coinIds.length === 0) {
+                $(".pool-coin-widget-medium").html("<div class='alert alert-danger'>No valid coins found for pricing data.</div>");
+                return;
+            }
+
+            // Fetch prices from CoinGecko
+            const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(",")}&vs_currencies=usd`;
+            $.ajax(coinGeckoUrl, {
+                success: function (priceData) {
+                    console.log("CoinGecko Price Data:", priceData);
+
+                    // Process pools and build widgets
+                    $.each(data.pools, function (index, pool) {
+                        const coinId = pool.coin.pricename ? pool.coin.pricename.toLowerCase() : null;
+                        const coinName = pool.coin.name || pool.coin.type;
+                        let coinPriceUSD = "Unavailable";
+
+                        if (coinId && priceData[coinId] && priceData[coinId].usd) {
+                            coinPriceUSD = `$${priceData[coinId].usd.toFixed(6)}`;
+                        }
+
+                        // Create pool widget
+                        poolCoinWidgetMediumTemplate += `
+                            <div class="col-md-4">
+                                <div class="med-box med-box-widget med-widget-user">
+                                    <div class="med-widget-user-header bg-night">
+                                        <button class='btn btn-outline-success btn-round btn-sm float-right'>
+                                            <a href='#${pool.id.toLowerCase()}'>
+                                                <span class='btn-label'>Start Mine&nbsp;&nbsp;
+                                                    <img src='coinlogo/${pool.coin.type.toLowerCase()}.png' height='20' width='20'>
+                                                </span>
+                                            </a>
+                                        </button>
+                                        <h3 class='med-widget-user-username'>${coinName}</h3>
+                                    </div>
+                                    <div class="med-widget-user-image">
+                                        <img class='avatar-img rounded-circle' src='coinlogo/${pool.coin.type.toLowerCase()}.png'>
+                                    </div>
+                                    <div class="med-box-footer">
+                                        <div class="row">
+                                            <div class="col-sm-4 med-border-right">
+                                                <div class="med-description-block">
+                                                    <h5 class="med-description-header">${pool.coin.algorithm}</h5>
+                                                    <span class="med-description-text">Algorithm</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-4 med-border-right">
+                                                <div class="med-description-block">
+                                                    <h5 class="med-description-header">${pool.paymentProcessing.payoutScheme}</h5>
+                                                    <span class="med-description-text">Payout</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-4">
+                                                <div class="med-description-block">
+                                                    <h5 class="med-description-header">${pool.poolFeePercent} %</h5>
+                                                    <span class="med-description-text">Pool Fee</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class='text-center mt-3'><strong>Current Value:</strong> ${coinPriceUSD}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+
+                    $(".pool-coin-widget-medium").html(poolCoinWidgetMediumTemplate);
+                },
+                error: function () {
+                    console.error("Error fetching prices from CoinGecko.");
+                    $(".pool-coin-widget-medium").html("<div class='alert alert-danger'>Failed to load coin prices.</div>");
+                }
+            });
+        })
+        .fail(function () {
+            $(".pool-coin-widget-medium").html("<div class='alert alert-warning'>The pool is currently down for maintenance.</div>");
+        });
 }
+
 
 // Load Widget small page content
 function loadWidgetSmallPage() {
